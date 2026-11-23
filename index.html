@@ -1,0 +1,604 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time to Find You – Interactive GPS Simulator: How GPS Finds Your Location</title>
+<meta name="description" content="Free interactive GPS simulator. Drag satellites, add clock errors, signal reflections and relativity, and see how GPS finds your position step by step. No login needed.">
+<meta name="keywords" content="GPS simulator, how GPS works, GPS trilateration, satellite geometry, DOP, GPS clock error, GPS relativity, multipath, interactive physics">
+<meta name="author" content="Time to Find You team">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#034068">
+<!-- TODO: replace with your real GitHub Pages address -->
+<link rel="canonical" href="https://sadoonali782-a11y.github.io/the-forth-satellite/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Time to Find You – Interactive GPS Simulator">
+<meta property="og:description" content="Drag satellites and see how GPS finds your location. Explore clock errors, satellite geometry, reflections and Einstein's relativity.">
+<meta property="og:url" content="https://sadoonali782-a11y.github.io/the-forth-satellite/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Time to Find You – Interactive GPS Simulator">
+<meta name="twitter:description" content="Learn how GPS works by playing with satellites, clocks and signals.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Time to Find You – GPS Simulator",
+  "description": "An interactive website that teaches how GPS finds your location using satellite signals and mathematics.",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Any (web browser)",
+  "inLanguage": "en",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Why does GPS need four satellites?",
+      "acceptedAnswer": { "@type": "Answer", "text": "A phone has three unknowns in space (x, y, z) plus an unknown clock error, so it needs four satellite signals. This flat 2D simulator needs three." } },
+    { "@type": "Question", "name": "How big is a 1 microsecond GPS clock error?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Radio signals travel at the speed of light, so 1 microsecond of clock error adds about 300 metres of distance error." } },
+    { "@type": "Question", "name": "What is DOP in GPS?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Dilution of Precision (DOP) measures how satellite positions affect accuracy. Spread-out satellites give a low DOP and better accuracy; bunched satellites give a high DOP." } },
+    { "@type": "Question", "name": "Why do tall buildings hurt GPS accuracy?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Signals bounce off buildings and travel a longer path, so the phone thinks the satellite is farther away. This is called multipath error." } },
+    { "@type": "Question", "name": "What does Einstein have to do with GPS?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Relativity makes satellite clocks run about 38 microseconds per day faster than ground clocks. Without correction, GPS would drift by roughly 11 kilometres every day." } }
+  ]
+}
+</script>
+
+<style>
+  :root { --bg:#00000; --panel:#0d2f52; --line:#2c5a85; --text:#eef4fb; --muted:#b4c7dd;
+          --sat:#ffc857; --real:#4ee0a1; --est:#ff7b7b; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; font-family: Georgia, serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  a { color:var(--sat); }
+  :focus-visible { outline:3px solid var(--sat); outline-offset:2px; }
+  .wrap { max-width:1200px; margin:0 auto; padding:0 20px; }
+  header { padding:24px 0 8px; }
+  h1 { margin:0; font-size:clamp(26px, 5vw, 38px); }
+  h2 { font-size:22px; margin:0 0 8px; }
+  h3 { font-size:17px; margin:16px 0 4px; }
+  .sub { margin:6px 0 0; color:var(--muted); max-width:70ch; font-size:18px; }
+  .howto { margin:14px 0 4px; padding:10px 14px; background:rgba(255,200,87,0.12); border:1px dashed var(--sat); border-radius:8px; }
+  .howto ol { margin:4px 0 0; padding-left:20px; }
+  nav { display:flex; flex-wrap:wrap; gap:8px; padding:14px 0; }
+  nav button, .btn { background:var(--panel); color:var(--text); border:1px solid var(--line); padding:10px 16px; min-height:44px;
+               border-radius:8px; cursor:pointer; font-family:inherit; font-size:15px; }
+  nav button:hover, .btn:hover { border-color:var(--sat); }
+  nav button.active { background:var(--sat); color:#1b1b1b; border-color:var(--sat); font-weight:bold; }
+  .app { display:flex; flex-wrap:wrap; gap:18px; }
+  canvas { background:#08233d; border:1px solid var(--line); border-radius:10px; width:600px; max-width:100%; height:auto; touch-action:none; }
+  .side { flex:1; min-width:290px; max-width:540px; }
+  .box { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+  label { display:block; margin:10px 0 2px; font-size:15px; color:var(--muted); }
+  input[type=range] { width:100%; height:28px; accent-color:var(--sat); }
+  .row { display:flex; gap:18px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  .row label { margin:0; color:var(--text); display:flex; gap:8px; align-items:center; cursor:pointer; }
+  .row input { width:20px; height:20px; accent-color:var(--sat); }
+  .lesson { border-left:5px solid var(--sat); }
+  .result { border-left:5px solid var(--real); font-size:17px; }
+  .result.warn { border-left-color:var(--est); }
+  table { width:100%; border-collapse:collapse; font-size:15px; }
+  td { padding:4px 0; } td:last-child { text-align:right; font-weight:bold; }
+  .good { color:var(--real); } .bad { color:var(--est); }
+  details summary { cursor:pointer; font-weight:bold; }
+  pre { margin:8px 0 0; white-space:pre-wrap; font-size:13px; color:var(--muted); font-family:Consolas, monospace; }
+  .key { margin-top:8px; } .key span { margin-right:14px; font-size:14px; }
+  .tip { font-size:14px; color:var(--muted); margin:6px 0 0; }
+  section.info { margin:32px 0 0; padding-top:8px; max-width:80ch; }
+  footer { margin:32px 0 24px; color:var(--muted); font-size:14px; }
+  noscript { display:block; padding:16px; background:#7a1f1f; }
+  .challenge { border-left:5px solid #b58cff; }
+  .opt { display:block; width:100%; text-align:left; margin:6px 0; }
+  .opt:disabled { opacity:1; cursor:default; }
+  .opt.right { border-color:var(--real); background:#0f4d45; }
+  .opt.wrong { border-color:var(--est); background:#5a2430; }
+  .small { font-size:14px; color:var(--muted); }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Time to Find You: How Does GPS Find Your Location?</h1>
+  <p class="sub">An interactive GPS simulator. Play with satellites, clocks and signals, and watch the maths find your phone.</p>
+  <div class="howto">
+    <b>How to play</b>
+    <ol>
+      <li>Pick a lesson below.</li>
+      <li>Drag the yellow satellites on the map.</li>
+      <li>Move the sliders and read the result box.</li>
+    </ol>
+  </div>
+</header>
+
+<noscript>This simulator needs JavaScript. Please enable it in your browser.</noscript>
+
+<nav id="tabs" aria-label="Lessons"></nav>
+
+<main>
+  <h2 class="visually-hidden" style="position:absolute;left:-9999px">GPS simulator</h2>
+  <div class="app">
+    <div>
+      <canvas id="c" width="600" height="600" role="img"
+        aria-label="Map showing satellites, their signal circles, the real phone position and the calculated GPS position"></canvas>
+      <div class="key">
+        <span style="color:var(--sat)">● Satellite (drag me)</span>
+        <span style="color:var(--real)">● Real phone</span>
+        <span style="color:var(--est)">✕ Calculated position</span>
+      </div>
+      <p class="tip">Each yellow circle is "how far the phone thinks it is from that satellite". The circles should meet at the phone.</p>
+    </div>
+
+    <div class="side">
+      <section class="box lesson" id="lesson" aria-live="polite"></section>
+
+      <section class="box result" id="takeaway" aria-live="polite"></section>
+
+      <section class="box challenge" id="challenge" aria-live="polite">
+        <b>Challenge mode</b>
+        <p class="small" id="chText">Test yourself with a goal. Your settings will change when you start.</p>
+        <button class="btn" id="chBtn" type="button">Start a challenge</button>
+      </section>
+
+      <section class="box" aria-label="Controls">
+        <label for="n">Number of satellites: <b id="nVal">5</b></label>
+        <input type="range" id="n" min="3" max="8" value="5" title="More satellites usually means a better fix">
+        <label for="clk">Phone clock error: <b id="clkVal">0</b> µs <small>(1 µs ≈ 300 m)</small></label>
+        <input type="range" id="clk" min="0" max="300" value="0" title="Error in the phone's clock, in microseconds">
+        <label for="noise">Signal measurement error: <b id="noiseVal">0</b> km</label>
+        <input type="range" id="noise" min="0" max="20" value="0" title="Random error in each distance measurement">
+        <div class="row">
+          <label><input type="checkbox" id="refl"> Signal reflection</label>
+          <label><input type="checkbox" id="rel" checked> Relativity correction</label>
+          <label><input type="checkbox" id="anim" checked> Animate signals</label>
+        </div>
+        <div class="row"><button class="btn" id="reset" type="button">Reset this lesson</button></div>
+      </section>
+
+      <section class="box" aria-label="Results">
+        <table>
+          <tr><td>Real position</td><td id="oReal"></td></tr>
+          <tr><td>Calculated position</td><td id="oEst"></td></tr>
+          <tr><td>Position error</td><td id="oErr"></td></tr>
+          <tr><td>Error if clock is ignored</td><td id="oNaive"></td></tr>
+          <tr><td>Clock error found</td><td id="oClk"></td></tr>
+          <tr><td>DOP (lower is better)</td><td id="oDop"></td></tr>
+        </table>
+      </section>
+
+      <section class="box"><details><summary>Step-by-step maths</summary><pre id="steps"></pre></details></section>
+    </div>
+  </div>
+
+  <section class="info" id="quiz" aria-live="polite">
+    <h2>Test what you learned</h2>
+    <div class="box" id="quizBox"></div>
+  </section>
+
+  <section class="info" id="about">
+    <h2>How GPS works in simple words</h2>
+    <p>Every GPS satellite constantly broadcasts the exact time. Your phone compares that time with its own clock to work out how long the signal took to arrive. Multiply that delay by the speed of light and you get a distance. With distances from several satellites, the phone finds the one point where all the distance circles meet. This is called trilateration.</p>
+    <p>This simulator is a flat 2D model, so the numbers are scaled for easy viewing. Real GPS works in 3D.</p>
+
+    <h2>Frequently asked questions</h2>
+    <h3>Why does GPS need four satellites?</h3>
+    <p>In real 3D space the phone has four unknowns: x, y, z and its own clock error. Four satellites give four equations. In this flat model there are three unknowns, so three satellites are enough.</p>
+    <h3>How big is a 1 microsecond clock error?</h3>
+    <p>Light travels about 300 metres in one microsecond, so a 1 µs clock error becomes roughly 300 m of position error.</p>
+    <h3>What is DOP?</h3>
+    <p>Dilution of Precision (DOP) shows how satellite positions affect accuracy. Satellites spread across the sky give a low DOP. Satellites bunched together give a high DOP and larger errors.</p>
+    <h3>Why do buildings hurt GPS?</h3>
+    <p>Signals bounce off buildings and take a longer path. The phone then thinks the satellite is farther away. This is called multipath error.</p>
+    <h3>What does Einstein have to do with GPS?</h3>
+    <p>Relativity makes satellite clocks run about 38 µs per day faster than ground clocks. Without correction, GPS positions would drift by about 11 km every day.</p>
+  </section>
+</main>
+ 
+</div>
+
+<script>
+// ---------- Setup ----------
+// World is 600 x 600 "km". Light travels 0.3 km per microsecond,
+// so a 1 µs clock error = 0.3 km (300 m) of distance error.
+const KM_PER_US = 0.3;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const phone = { x: 300, y: 400 };
+const building = { x: 220, y: 230, w: 160, h: 50 };
+
+const sats = [
+  {x:80,y:60},{x:520,y:80},{x:300,y:30},{x:560,y:300},
+  {x:40,y:320},{x:150,y:150},{x:450,y:170},{x:300,y:560}
+];
+const noiseSeed = [0.8,-0.6,0.3,-0.9,0.5,-0.2,0.7,-0.4];
+const relError = [6,10,8,12,5,9,11,7];
+const REFLECT_EXTRA = 30;
+
+const $ = id => document.getElementById(id);
+let currentFeature = null;
+let last = null; // latest results, used by the animation
+
+// ---------- Maths ----------
+function blocked(s) {
+  for (let t = 0; t <= 1; t += 0.02) {
+    const x = s.x + (phone.x - s.x) * t, y = s.y + (phone.y - s.y) * t;
+    if (x > building.x && x < building.x + building.w && y > building.y && y < building.y + building.h) return true;
+  }
+  return false;
+}
+
+function measure(n) {
+  const list = [];
+  for (let i = 0; i < n; i++) {
+    const d = Math.hypot(sats[i].x - phone.x, sats[i].y - phone.y);
+    let pr = d + KM_PER_US * +$('clk').value + noiseSeed[i] * +$('noise').value;
+    const bounce = $('refl').checked && blocked(sats[i]);
+    if (bounce) pr += REFLECT_EXTRA;
+    if (!$('rel').checked) pr += relError[i];
+    list.push({ d, pr, bounce });
+  }
+  return list;
+}
+
+function invert(A) {
+  const n = A.length;
+  const M = A.map((row, i) => [...row, ...Array.from({length:n}, (_, j) => i === j ? 1 : 0)]);
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-9) return null;
+    [M[c], M[p]] = [M[p], M[c]];
+    const div = M[c][c];
+    for (let j = 0; j < 2 * n; j++) M[c][j] /= div;
+    for (let r = 0; r < n; r++) {
+      if (r === c) continue;
+      const f = M[r][c];
+      for (let j = 0; j < 2 * n; j++) M[r][j] -= f * M[c][j];
+    }
+  }
+  return M.map(row => row.slice(n));
+}
+
+function solve(meas, n, useClock) {
+  let x = 300, y = 300, b = 0;
+  const k = useClock ? 3 : 2;
+  let Q = null;
+  for (let iter = 0; iter < 20; iter++) {
+    const JTJ = Array.from({length:k}, () => Array(k).fill(0));
+    const JTr = Array(k).fill(0);
+    for (let i = 0; i < n; i++) {
+      const dx = x - sats[i].x, dy = y - sats[i].y;
+      const d = Math.hypot(dx, dy) || 1e-6;
+      const row = useClock ? [dx / d, dy / d, 1] : [dx / d, dy / d];
+      const resid = meas[i].pr - (d + (useClock ? b : 0));
+      for (let a = 0; a < k; a++) {
+        JTr[a] += row[a] * resid;
+        for (let c = 0; c < k; c++) JTJ[a][c] += row[a] * row[c];
+      }
+    }
+    Q = invert(JTJ);
+    if (!Q) return null;
+    const step = Q.map(r => r.reduce((s, v, c) => s + v * JTr[c], 0));
+    x += step[0]; y += step[1]; if (useClock) b += step[2];
+    if (Math.hypot(step[0], step[1]) < 1e-6) break;
+  }
+  const dop = Q ? Math.sqrt(Q.reduce((s, r, i) => s + r[i], 0)) : NaN;
+  return { x, y, b, dop };
+}
+
+// ---------- Drawing ----------
+function draw(meas, n, fix) {
+  ctx.clearRect(0, 0, 600, 600);
+
+  ctx.fillStyle = '#3a5f86';
+  ctx.fillRect(building.x, building.y, building.w, building.h);
+  ctx.fillStyle = '#d3e2f2'; ctx.font = '13px Georgia';
+  ctx.fillText('Building', building.x + 8, building.y + 20);
+
+  for (let i = 0; i < n; i++) {
+    const s = sats[i];
+    ctx.strokeStyle = meas[i].bounce ? 'rgba(255,123,123,0.85)' : 'rgba(255,200,87,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(s.x, s.y, meas[i].pr, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([4, 5]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(phone.x, phone.y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  for (let i = 0; i < n; i++) {
+    ctx.fillStyle = '#ffc857';
+    ctx.beginPath(); ctx.arc(sats[i].x, sats[i].y, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1b1b1b'; ctx.font = 'bold 12px Georgia';
+    ctx.fillText(i + 1, sats[i].x - 4, sats[i].y + 4);
+  }
+
+  // animated signal dots travelling from each satellite to the phone
+  if ($('anim').checked) {
+    const time = performance.now() / 2500;
+    for (let i = 0; i < n; i++) {
+      const t = (time + i * 0.13) % 1;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(sats[i].x + (phone.x - sats[i].x) * t, sats[i].y + (phone.y - sats[i].y) * t, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.fillStyle = '#4ee0a1';
+  ctx.beginPath(); ctx.arc(phone.x, phone.y, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#eef4fb'; ctx.font = '13px Georgia';
+  ctx.fillText('Real phone', phone.x + 12, phone.y + 5);
+
+  if (fix) {
+    ctx.strokeStyle = '#ff7b7b'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(fix.x - 8, fix.y - 8); ctx.lineTo(fix.x + 8, fix.y + 8);
+    ctx.moveTo(fix.x + 8, fix.y - 8); ctx.lineTo(fix.x - 8, fix.y + 8);
+    ctx.stroke();
+  }
+}
+
+// ---------- Plain-language summary ----------
+function takeaway(meas, n, fix, err, errNaive) {
+  const box = $('takeaway');
+  const clk = +$('clk').value;
+  const bounced = meas.filter(m => m.bounce).length;
+  const reasons = [];
+  if (clk > 0) reasons.push(`the phone clock is off by ${clk} µs (${(clk * KM_PER_US).toFixed(0)} km), which the solver removes`);
+  if (bounced > 0) reasons.push(`${bounced} reflected signal${bounced > 1 ? 's' : ''} look too far away`);
+  if (!$('rel').checked) reasons.push('satellite clocks are not corrected for relativity');
+  if (+$('noise').value > 0) reasons.push('measurements are noisy');
+
+  let msg;
+  if (err < 1) {
+    msg = `<b class="good">Great fix!</b> The calculated position is only ${err.toFixed(1)} km from the real phone.`;
+    if (clk > 0) msg += ` Ignoring the clock would have caused ${errNaive.toFixed(0)} km of error.`;
+    box.className = 'box result';
+  } else {
+    msg = `<b class="bad">Position off by ${err.toFixed(1)} km.</b>`;
+    const why = [];
+    if (bounced > 0) why.push('some signals bounced off the building');
+    if (!$('rel').checked) why.push('relativity correction is off');
+    if (+$('noise').value > 0) why.push('measurements are noisy');
+    if (fix.dop > 3) why.push('the satellites are bunched together (high DOP)');
+    if (why.length) msg += ' Why: ' + why.join(', ') + '.';
+    box.className = 'box result warn';
+  }
+  box.innerHTML = msg;
+}
+
+// ---------- Update everything ----------
+function update() {
+  const n = +$('n').value;
+  $('nVal').textContent = n;
+  $('clkVal').textContent = $('clk').value;
+  $('noiseVal').textContent = $('noise').value;
+
+  const meas = measure(n);
+  const fix = solve(meas, n, true);
+  const naive = solve(meas, n, false);
+  last = { meas, n, fix };
+  draw(meas, n, fix);
+
+  const f1 = v => v.toFixed(1);
+  const clockKm = KM_PER_US * +$('clk').value;
+  $('oReal').textContent = `(${phone.x}, ${phone.y})`;
+  if (!fix) {
+    $('oEst').textContent = 'cannot solve';
+    $('oErr').textContent = $('oClk').textContent = $('oDop').textContent = '–';
+    $('oNaive').textContent = '–';
+    $('takeaway').className = 'box result warn';
+    $('takeaway').textContent = 'The satellites are lined up, so the circles cannot give one position. Drag them apart.';
+    $('steps').textContent = 'No solution: the satellites are in a line.';
+    return;
+  }
+  const err = Math.hypot(fix.x - phone.x, fix.y - phone.y);
+  const errNaive = naive ? Math.hypot(naive.x - phone.x, naive.y - phone.y) : NaN;
+  $('oEst').textContent = `(${f1(fix.x)}, ${f1(fix.y)})`;
+  $('oErr').textContent = f1(err) + ' km';
+  $('oErr').className = err < 2 ? 'good' : 'bad';
+  $('oNaive').textContent = naive ? f1(errNaive) + ' km' : '–';
+  $('oNaive').className = errNaive < 2 ? 'good' : 'bad';
+  $('oClk').textContent = `${f1(fix.b / KM_PER_US)} µs (${f1(fix.b)} km)`;
+  $('oDop').textContent = f1(fix.dop);
+  takeaway(meas, n, fix, err, errNaive);
+  checkChallenge(err, fix);
+
+  let s = '1. Each satellite sends the time it transmitted.\n';
+  s += '2. Phone measures: distance = (time delay) × speed of light.\n';
+  s += `   Clock error ${$('clk').value} µs × 0.3 km/µs = ${f1(clockKm)} km added to every distance.\n\n`;
+  for (let i = 0; i < n; i++) {
+    s += `Sat ${i + 1}: true ${f1(meas[i].d)} km, measured ${f1(meas[i].pr)} km${meas[i].bounce ? '  (bounced!)' : ''}\n`;
+  }
+  s += '\n3. Unknowns: x, y and clock error b.\n';
+  s += '4. Guess a position, compare predicted distances with measured ones, then correct the guess (least squares). Repeat until it stops changing.\n';
+  s += `5. Result: x=${f1(fix.x)}, y=${f1(fix.y)}, b=${f1(fix.b)} km.\n`;
+  s += '6. DOP = how much satellite geometry magnifies errors. Spread-out satellites give a small DOP.';
+  $('steps').textContent = s;
+}
+
+// ---------- Dragging satellites ----------
+let dragging = -1;
+function pointer(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * 600 / r.width, y: (e.clientY - r.top) * 600 / r.height };
+}
+function satAt(p) {
+  const n = +$('n').value;
+  for (let i = 0; i < n; i++) if (Math.hypot(p.x - sats[i].x, p.y - sats[i].y) < 20) return i;
+  return -1;
+}
+canvas.addEventListener('pointerdown', e => {
+  dragging = satAt(pointer(e));
+  if (dragging >= 0) { canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; }
+});
+canvas.addEventListener('pointermove', e => {
+  const p = pointer(e);
+  if (dragging < 0) { canvas.style.cursor = satAt(p) >= 0 ? 'grab' : 'default'; return; }
+  sats[dragging].x = Math.max(10, Math.min(590, p.x));
+  sats[dragging].y = Math.max(10, Math.min(590, p.y));
+  update();
+});
+canvas.addEventListener('pointerup', () => { dragging = -1; canvas.style.cursor = 'default'; });
+
+// ---------- Lessons ----------
+const defaults = sats.map(s => ({ x: s.x, y: s.y }));
+const features = [
+  { name: 'Find Your Position', n: 5, clk: 0, noise: 0, refl: false, rel: true,
+    text: 'Each satellite tells the phone how far away it is, drawn as a circle. Where the circles cross is the phone. Drag a satellite and watch the circles move.' },
+  { name: 'The Clock Problem', n: 3, clk: 100, noise: 0, refl: false, rel: true,
+    text: 'The phone has a cheap clock. A 1 µs error adds about 300 m to every distance, so the circles miss each other. GPS solves for time as an extra unknown, which needs one more satellite (4 in real 3D GPS). Compare "Error if clock is ignored" with "Position error".' },
+  { name: 'Satellite Geometry', n: 4, clk: 0, noise: 5, refl: false, rel: true,
+    text: 'Drag all satellites close together and DOP jumps, so small errors become large position errors. Spread them out and DOP drops.',
+    sats: [{x:250,y:60},{x:300,y:40},{x:350,y:70},{x:320,y:100}] },
+  { name: 'Signal Reflection', n: 6, clk: 0, noise: 0, refl: true, rel: true,
+    text: 'Signals that bounce off a building travel a longer path, so the phone thinks that satellite is farther away (red circles). Drag a satellite to change which signals are blocked.' },
+  { name: 'Einstein and GPS', n: 6, clk: 0, noise: 0, refl: false, rel: false,
+    text: 'Satellite clocks run about 38 µs per day faster than ground clocks (relativity), roughly 11 km of error per day. Amounts are scaled up here so you can see them. Tick "Relativity correction" and the error vanishes.' }
+];
+
+function applySettings(f) {
+  sats.forEach((s, i) => { s.x = defaults[i].x; s.y = defaults[i].y; });
+  if (f.sats) f.sats.forEach((s, i) => { sats[i].x = s.x; sats[i].y = s.y; });
+  $('n').value = f.n; $('clk').value = f.clk; $('noise').value = f.noise;
+  $('refl').checked = f.refl; $('rel').checked = f.rel;
+}
+
+function loadFeature(f, btn) {
+  currentFeature = { f, btn };
+  document.querySelectorAll('nav button').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
+  btn.classList.add('active'); btn.setAttribute('aria-current', 'true');
+  applySettings(f);
+  stopChallenge();
+  $('lesson').innerHTML = '<b>' + f.name + '</b><br>' + f.text;
+  update();
+}
+features.forEach((f, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = f.name;
+  b.onclick = () => loadFeature(f, b);
+  $('tabs').appendChild(b);
+  if (i === 0) setTimeout(() => b.click(), 0);
+});
+
+// ---------- Challenge mode ----------
+const challenges = [
+  { title: 'Dodge the building', n: 6, clk: 0, noise: 0, refl: true, rel: true,
+    text: 'Reflected signals are ruining the fix. Drag satellites out of the building shadow to get the error under 3 km.',
+    goal: (err) => err < 3 },
+  { title: 'Spread them out', n: 4, clk: 0, noise: 5, refl: false, rel: true,
+    sats: [{x:250,y:60},{x:300,y:40},{x:350,y:70},{x:320,y:100}],
+    text: 'The satellites are bunched together. Drag them apart to get DOP below 3.',
+    goal: (err, fix) => fix.dop < 3 },
+  { title: 'Fix the clocks', n: 6, clk: 150, noise: 0, refl: false, rel: false,
+    text: 'Satellite clocks are drifting. Turn on the relativity correction to get the error under 1 km.',
+    goal: (err) => err < 1 }
+];
+let activeChallenge = null, chIndex = -1, chScore = 0;
+const CH_DEFAULT = 'Test yourself with a goal. Your settings will change when you start.';
+
+function startChallenge() {
+  chIndex = (chIndex + 1) % challenges.length;
+  activeChallenge = Object.assign({ done: false }, challenges[chIndex]);
+  applySettings(activeChallenge);
+  document.querySelectorAll('nav button').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
+  $('lesson').innerHTML = '<b>Challenge mode</b><br>Reach the goal in the purple box.';
+  $('chText').innerHTML = '<b>' + activeChallenge.title + '</b><br>' + activeChallenge.text;
+  $('chBtn').textContent = 'Skip to next challenge';
+  update();
+}
+function stopChallenge() {
+  activeChallenge = null;
+  $('chText').textContent = CH_DEFAULT;
+  $('chBtn').textContent = 'Start a challenge';
+}
+function checkChallenge(err, fix) {
+  if (!activeChallenge || activeChallenge.done) return;
+  if (activeChallenge.goal(err, fix)) {
+    activeChallenge.done = true;
+    chScore++;
+    $('chText').innerHTML = '<b class="good">Challenge complete!</b> ' + activeChallenge.title +
+      '. Challenges completed: ' + chScore + '.';
+    $('chBtn').textContent = 'Next challenge';
+  }
+}
+$('chBtn').addEventListener('click', startChallenge);
+
+// ---------- Quiz ----------
+const quiz = [
+  { q: 'How much distance error does a 1 microsecond clock error cause?',
+    o: ['About 3 metres', 'About 300 metres', 'About 30 kilometres'], a: 1,
+    why: 'Light travels about 300 m in one microsecond.' },
+  { q: 'Why does real GPS need four satellites?',
+    o: ['To have a backup', 'There are three unknowns in space (x, y, z) plus the clock error', 'To make the signal stronger'], a: 1,
+    why: 'Four unknowns need four equations.' },
+  { q: 'Which satellite layout gives the best accuracy?',
+    o: ['All satellites close together', 'Satellites spread far apart', 'All satellites in a straight line'], a: 1,
+    why: 'Spread-out satellites give a low DOP.' },
+  { q: 'Why do tall buildings hurt GPS?',
+    o: ['Signals bounce and take a longer path', 'They drain the phone battery', 'They slow down the satellites'], a: 0,
+    why: 'A longer path makes the satellite look farther away. This is called multipath.' },
+  { q: 'What would happen if GPS ignored relativity?',
+    o: ['Nothing would change', 'Positions would drift by about 11 km every day', 'The phone would turn off'], a: 1,
+    why: 'Satellite clocks run about 38 microseconds per day faster than ground clocks.' }
+];
+let qi = 0, qScore = 0;
+function showQuestion() {
+  const box = $('quizBox');
+  if (qi >= quiz.length) {
+    box.innerHTML = '<b>You scored ' + qScore + ' out of ' + quiz.length + '.</b><p class="small">' +
+      (qScore === quiz.length ? 'Perfect! You understand how GPS works.' : 'Try the lessons again, then retake the quiz.') +
+      '</p><button class="btn" id="qAgain" type="button">Take the quiz again</button>';
+    $('qAgain').onclick = () => { qi = 0; qScore = 0; showQuestion(); };
+    return;
+  }
+  const q = quiz[qi];
+  box.innerHTML = '<b>Question ' + (qi + 1) + ' of ' + quiz.length + '</b><p>' + q.q + '</p>';
+  q.o.forEach((text, idx) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn opt'; b.textContent = text;
+    b.onclick = () => answer(idx, b);
+    box.appendChild(b);
+  });
+}
+function answer(idx, btn) {
+  const q = quiz[qi], box = $('quizBox');
+  box.querySelectorAll('.opt').forEach((b, i) => { b.disabled = true; if (i === q.a) b.classList.add('right'); });
+  if (idx === q.a) qScore++; else btn.classList.add('wrong');
+  const p = document.createElement('p');
+  p.textContent = (idx === q.a ? 'Correct! ' : 'Not quite. ') + q.why;
+  box.appendChild(p);
+  const next = document.createElement('button');
+  next.type = 'button'; next.className = 'btn';
+  next.textContent = qi === quiz.length - 1 ? 'See my score' : 'Next question';
+  next.onclick = () => { qi++; showQuestion(); };
+  box.appendChild(next);
+}
+showQuestion();
+
+// ---------- Controls + animation loop ----------
+$('reset').addEventListener('click', () => loadFeature(currentFeature.f, currentFeature.btn));
+['n','clk','noise','refl','rel','anim'].forEach(id => $(id).addEventListener('input', update));
+
+if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) $('anim').checked = false;
+function loop() {
+  if (last && $('anim').checked) draw(last.meas, last.n, last.fix);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
