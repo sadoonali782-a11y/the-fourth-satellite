@@ -70,7 +70,9 @@ export function makeGlobeView(box, { home, interactive = true, transparentBackgr
 
   function placeCamera() {
     cameraState.distance = clamp(cameraState.distance, closestAllowedDistance(), FARTHEST_CAMERA_IN_KM);
-    camera.position.copy(cameraState.target).addScaledVector(cameraState.towardsCamera, cameraState.distance);
+    // On narrow (tall) screens, step back a little so things at the sides still fit.
+    const narrowness = Math.max(1, 1.15 / (lastSize.cssWidth / lastSize.cssHeight));
+    camera.position.copy(cameraState.target).addScaledVector(cameraState.towardsCamera, cameraState.distance * narrowness);
     camera.up.copy(cameraState.up);
     camera.lookAt(cameraState.target);
     const heightAboveGround = camera.position.length() - EARTH_RADIUS_IN_KM;
