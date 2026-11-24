@@ -16,10 +16,12 @@ export const SATELLITE_ICON_HTML = `
 
 // The starting view for a step: looking at the Earth from a little south of you and well above,
 // so you sit near the top of the Earth with your satellites in the sky above.
-export function homeViewFor(youInMetres, distanceInKm = 80_000) {
+// lookingDown: how steeply the camera looks down on you (0 = from the side, 1 = straight down).
+export function homeViewFor(youInMetres, distanceInKm = 80_000, lookingDown = 0.62, targetFromCentreInKm = 6000) {
   const { up, north } = localDirectionsAt(youInMetres);
-  const towardsCamera = [0, 1, 2].map((index) => up[index] * 0.62 - north[index] * 0.78);
-  const target = up.map((part) => part * 6000);
+  const sideways = Math.sqrt(1 - lookingDown * lookingDown);
+  const towardsCamera = [0, 1, 2].map((index) => up[index] * lookingDown - north[index] * sideways);
+  const target = up.map((part) => part * targetFromCentreInKm);
   return { target, towardsCamera, up, distanceInKm };
 }
 

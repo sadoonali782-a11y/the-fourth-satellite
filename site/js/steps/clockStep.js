@@ -222,7 +222,7 @@ export function startClockStep() {
       trueBalls[index].place(position, distanceBetween(state.you, position));
       satelliteMarkers[index].setPoint(position);
       satelliteMarkers[index].element.classList.toggle('is-faded', !isOn);
-      satelliteLabels[index].setPoint(position, -5, -30);
+      satelliteLabels[index].setPoint(position, -5, -36);
       satelliteLabels[index].element.classList.toggle('is-faded', !isOn);
     });
 

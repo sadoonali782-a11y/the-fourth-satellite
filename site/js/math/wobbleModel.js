@@ -7,8 +7,8 @@ import { findPosition, sizeUncertaintyCircle } from './positionSolver.js';
 import { localDirectionsAt } from './earthGeometry.js';
 import { makeRandomNumberGenerator, bellCurveNumber } from './randomNumbers.js';
 
-// Real measurement errors are about 1.5 m. We use 750 km, about 500,000 times bigger, so you can see it.
-export const EXAGGERATED_MEASUREMENT_ERROR_IN_METRES = 750_000;
+// Real measurement errors are about 1.5 m. We use 1,500 km, a million times bigger, so you can see it.
+export const EXAGGERATED_MEASUREMENT_ERROR_IN_METRES = 1_500_000;
 export const NUMBER_OF_SPECKS_IN_CLOUD = 120;
 export const ROUNDS_PER_SPECK = 6;
 

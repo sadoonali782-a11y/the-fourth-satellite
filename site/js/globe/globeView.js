@@ -25,13 +25,13 @@ let hintAlreadyShownForTouch = false;
 let hintAlreadyShownForWheel = false;
 
 // home: { target: [x, y, z] in km, towardsCamera: [x, y, z], up: [x, y, z], distanceInKm }
-export function makeGlobeView(box, { home, interactive = true, transparentBackground = false, label = 'globe' }) {
+export function makeGlobeView(box, { home, interactive = true, transparentBackground = false, label = 'globe', fieldOfViewInDegrees = FIELD_OF_VIEW_IN_DEGREES }) {
   const canvas = box.querySelector('.globe-picture');
   const overlay = box.querySelector('.globe-overlay');
   const colours = themeColours();
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(FIELD_OF_VIEW_IN_DEGREES, 1, 1, 2_000_000);
+  const camera = new THREE.PerspectiveCamera(fieldOfViewInDegrees, 1, 1, 2_000_000);
   scene.add(camera);
   const sunlight = new THREE.DirectionalLight(0xffffff, 2.4);
   sunlight.position.set(-0.6, 0.7, 1); // over the viewer's left shoulder
