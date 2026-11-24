@@ -1,4 +1,4 @@
-// Checks on step 5's street: bounce lengths and the 3D-city-map check. Run: node --test tests/
+// Checks on step 5's street: bounce lengths, and how bounces push the dot. Run: node --test
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,8 +7,7 @@ import {
   bounceExtraDistance,
   traceSignal,
   measureStreetSignals,
-  findPositionWithMap,
-  findPositionWithoutMap,
+  findStreetPosition,
   makeSkyStartingAngles,
   skyAnglesAfter,
   PHONE_HEIGHT_IN_METRES,
@@ -30,18 +29,17 @@ test('overhead signals come straight; very low ones behind a tall roof are block
   assert.equal(traceSignal({ angleInDegrees: 8, acrossInMetres: 11, heightInMetres: 1.4, ...buildings }).fate, 'blocked');
 });
 
-test('with a 3D city map and no noise, the phone lands within 0.25 m of you at several spots', () => {
+test('with tall buildings, bounced signals push the dot away from you', () => {
   const skyAngles = skyAnglesAfter(makeSkyStartingAngles(), 37);
-  [1, 3.5, 6, 11, 15.5, 21].forEach((standingAcrossInMetres) => {
-    const signals = measureStreetSignals({ skyAngles, standingAcrossInMetres, leftBuildingHeightInMetres: 40 });
-    const answer = findPositionWithMap(signals, 40);
-    assert.ok(Math.abs(answer.acrossInMetres - standingAcrossInMetres) <= 0.25, `at ${standingAcrossInMetres} m got ${answer.acrossInMetres}`);
-  });
+  const signals = measureStreetSignals({ skyAngles, standingAcrossInMetres: 6, leftBuildingHeightInMetres: 40 });
+  assert.ok(signals.some((signal) => signal.fate === 'bounced'), 'some signals bounce');
+  const answer = findStreetPosition(signals);
+  assert.ok(answer === null || Math.abs(answer.acrossInMetres - 6) > 1, 'a bounce makes the answer wrong');
 });
 
-test('with open sky (1 m buildings) the phone lands on you even without the map', () => {
+test('with open sky (1 m buildings) the phone lands on you', () => {
   const skyAngles = makeSkyStartingAngles();
   const signals = measureStreetSignals({ skyAngles, standingAcrossInMetres: 6, leftBuildingHeightInMetres: 1 });
-  const answer = findPositionWithoutMap(signals);
+  const answer = findStreetPosition(signals);
   assert.ok(Math.abs(answer.acrossInMetres - 6) < 0.05);
 });

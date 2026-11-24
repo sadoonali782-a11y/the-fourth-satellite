@@ -1,4 +1,5 @@
-// Step 5's maths: a street seen end on, which signals get through, and how the phone finds itself.
+// Step 5's maths: a street seen end on, which signals get through, and how the phone finds itself
+// (fooled by bounced signals, because it assumes every signal came straight).
 // Pure maths, shared by the step's drawing and by the tests. No drawing here.
 //
 // The street is a flat slice: "across" runs from the left wall (0 m) to the right wall (22 m), "up" is height.
@@ -17,8 +18,6 @@ export const LOWEST_SATELLITE_ANGLE_IN_DEGREES = 5;
 export const NUMBER_OF_SATELLITES_IN_SKY = 16;
 export const SMALL_MEASUREMENT_ERROR_IN_METRES = 1.5;
 export const PHONE_CLOCK_ERROR_IN_SECONDS = 2.5e-6;
-export const MAP_CHECK_SPACING_IN_METRES = 0.25;
-export const PENALTY_FOR_A_SIGNAL_THAT_COULD_NOT_ARRIVE = 1e6;
 
 // The real sky turns once every 11 h 58 min. Ours turns about 137 times faster so you can watch it.
 export const SKY_SPEED_UP = 137;
@@ -137,10 +136,10 @@ export function heardSignals(signals) {
   return signals.filter((signal) => signal.measuredTravelTimeInSeconds !== null);
 }
 
-// Without a city map the phone believes every signal came straight, and solves for
+// The phone believes every signal came straight, and solves for
 // across-street position, height and clock (3 unknowns). It needs at least 3 heard signals.
 // Returns { acrossInMetres } or null.
-export function findPositionWithoutMap(signals) {
+export function findStreetPosition(signals) {
   const heard = heardSignals(signals);
   const answer = findPosition({
     satellitePositions: heard.map((signal) => signal.satellitePosition),
@@ -149,50 +148,6 @@ export function findPositionWithoutMap(signals) {
     solveForClock: true,
   });
   return answer ? { acrossInMetres: answer.position[0] } : null;
-}
-
-// With a 3D city map the phone knows the building heights and that it is held at hand height.
-// It tries every spot across the street and, for each, predicts every heard signal's distance including
-// any bounce it would have from there. The unknown clock adds the same amount to every signal, so it only
-// compares how spread out the misses are around their average. A heard signal that would have been blocked
-// from a spot makes that spot very unlikely. The best-scoring spot wins. Needs at least 2 heard signals.
-// Returns { acrossInMetres } or null.
-export function findPositionWithMap(signals, leftBuildingHeightInMetres) {
-  const heard = heardSignals(signals);
-  if (heard.length < 2) {
-    return null;
-  }
-  const { leftHeight, rightHeight } = buildingHeights(leftBuildingHeightInMetres);
-  let bestAcross = null;
-  let bestScore = Infinity;
-
-  for (let across = MAP_CHECK_SPACING_IN_METRES; across < STREET_WIDTH_IN_METRES; across += MAP_CHECK_SPACING_IN_METRES) {
-    const candidatePosition = [across, PHONE_HEIGHT_IN_METRES];
-    const misses = [];
-    let impossibleSignals = 0;
-    heard.forEach((signal) => {
-      const predictedPath = traceSignal({
-        angleInDegrees: signal.angleInDegrees,
-        acrossInMetres: across,
-        heightInMetres: PHONE_HEIGHT_IN_METRES,
-        leftHeight,
-        rightHeight,
-      });
-      if (predictedPath.fate === 'blocked') {
-        impossibleSignals += 1;
-      }
-      const predictedDistance = distanceBetween(candidatePosition, signal.satellitePosition) + predictedPath.extraDistanceInMetres;
-      misses.push(signal.measuredTravelTimeInSeconds * SPEED_OF_LIGHT_IN_METRES_PER_SECOND - predictedDistance);
-    });
-    const averageMiss = misses.reduce((total, miss) => total + miss, 0) / misses.length;
-    const spreadOfMisses = misses.reduce((total, miss) => total + (miss - averageMiss) ** 2, 0);
-    const score = spreadOfMisses + impossibleSignals * PENALTY_FOR_A_SIGNAL_THAT_COULD_NOT_ARRIVE;
-    if (score < bestScore) {
-      bestScore = score;
-      bestAcross = across;
-    }
-  }
-  return { acrossInMetres: bestAcross };
 }
 
 export function isInsideTheStreet(acrossInMetres) {

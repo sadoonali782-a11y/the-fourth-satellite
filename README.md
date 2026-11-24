@@ -14,7 +14,7 @@ The page walks through five small steps, each with something to play with:
    until the four balls meet, or let the phone do it. Turn off the fourth satellite and every shrink fits.
 4. **Wobble.** Small measurement errors move the dot more when the satellites are bunched together.
    That is the pale circle round your dot.
-5. **City.** Tall buildings block and bounce signals, so the dot wanders. A 3D city map lets the phone undo it.
+5. **City.** Tall buildings block and bounce signals, so the dot wanders, sometimes right into a building.
 
 Steps 2–4 happen on a 3D globe you can turn and zoom. Steps 1 and 5 are side views of the same Earth.
 
@@ -44,7 +44,7 @@ node --test
 They check that the phone’s solver finds the exact position and clock with no noise, refuses when it has
 too few satellites, lands on the same answer from different first guesses, and never reads your true
 position. They also check step 3’s “right shrink”, the size of step 4’s pale circle against the real
-scatter of noisy answers, step 1’s distances, and step 5’s bounces and 3D-map check.
+scatter of noisy answers, step 1’s distances, and step 5’s bounces.
 
 ## How the code is laid out
 

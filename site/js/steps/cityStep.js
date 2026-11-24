@@ -13,8 +13,7 @@ import {
   skyAnglesAfter,
   measureStreetSignals,
   heardSignals,
-  findPositionWithMap,
-  findPositionWithoutMap,
+  findStreetPosition,
   buildingHeights,
   isInsideTheStreet,
 } from '../math/streetSignals.js';
@@ -31,7 +30,6 @@ export function startCityStep() {
   const heightSlider = document.getElementById('city-height');
   const standSlider = document.getElementById('city-stand');
   const pauseButton = document.getElementById('city-pause');
-  const mapSwitch = document.getElementById('city-map-switch');
   const writeCaption = makeCaptionWriter(document.getElementById('city-caption'));
   const counts = {
     straight: document.getElementById('city-count-straight'),
@@ -45,7 +43,6 @@ export function startCityStep() {
     skyIsPaused: prefersLessMotion(),
     leftBuildingHeight: Number(heightSlider.value),
     standingAcross: Number(standSlider.value),
-    usesCityMap: false,
     secondsUntilNextAnswer: 0,
     trail: [], // earlier answers, newest first: { acrossInMetres }
     latestAnswer: null,
@@ -79,11 +76,6 @@ export function startCityStep() {
     state.skyIsPaused = !state.skyIsPaused;
     showPauseState();
   });
-  mapSwitch.addEventListener('click', () => {
-    state.usesCityMap = !state.usesCityMap;
-    mapSwitch.setAttribute('aria-checked', String(state.usesCityMap));
-    clearTrail();
-  });
 
   function workOutNewAnswer() {
     const signals = measureStreetSignals({
@@ -92,7 +84,7 @@ export function startCityStep() {
       leftBuildingHeightInMetres: state.leftBuildingHeight,
       nextRandomNumber: state.nextRandomNumber,
     });
-    const answer = state.usesCityMap ? findPositionWithMap(signals, state.leftBuildingHeight) : findPositionWithoutMap(signals);
+    const answer = findStreetPosition(signals);
     if (answer) {
       state.latestAnswer = answer;
       state.hasHadAnAnswer = true;
@@ -135,9 +127,8 @@ export function startCityStep() {
 
     if (state.latestAnswer === null) {
       const heardCount = heardSignals(state.signals).length;
-      const needed = state.usesCityMap ? 2 : 3;
       const satelliteWord = heardCount === 1 ? 'satellite' : 'satellites';
-      let text = `<strong>No fix.</strong> The phone hears ${heardCount} ${satelliteWord} and needs ${needed}.`;
+      let text = `<strong>No fix.</strong> The phone hears ${heardCount} ${satelliteWord} and needs 3.`;
       if (state.hasHadAnAnswer) {
         text += ' The faded dot is its last answer.';
       }

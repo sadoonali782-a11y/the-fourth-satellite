@@ -27,7 +27,8 @@ The first block records the product interview held before building (24 Nov 2026)
 | 18 | Reduced motion: nothing moves on its own, everything still responds. Step 1 sends one message per change plus a "Send again" button; glides and fly-ins jump to the end; step 4's dot holds still with a "New measurement" button; step 5's sky starts paused; the opening globe holds still. Those extra buttons appear only in that mode. | Honours the setting without removing any lesson. |
 | 19 | Every real-world number on the page gets a footnote to its source; the 4.9 m figure appears as "about 5 m". | Honesty rule covers facts, not only maths. |
 | 20 | Every simplification gets a fine-print line, including frozen satellites, step 2's perfect clock, step 5 showing only the across-street position, and the flat pale circle. | Spec's own honesty rule (its Open question 8). |
-| 21 | Licence MIT, held by "The Dissectors". Repository name `the-fourth-satellite-final`; single branch `main`. Deployment comes later, so the live address is a placeholder in one settings file. | Team's answer. |
+| 21 | Step 5 has no "Use a 3D city map" switch, no Try prompt for it, and no map-aided solver; its source (van Diggelen 2020) is dropped from the list. | The team decided the 3D-map fix can't be shown honestly in this end-on street and shouldn't be. Step 5 now ends on why the dot wanders. |
+| 22 | Licence MIT, held by "The Dissectors". Repository name `the-fourth-satellite-final`; single branch `main`. Deployment comes later, so the live address is a placeholder in one settings file. | Team's answer. |
 
 ## Build choices
 
@@ -67,6 +68,6 @@ The first block records the product interview held before building (24 Nov 2026)
 | Step 3 unknowns card | Why one more satellite? / flat: 3 unknowns, round: 4 | Why a fourth satellite? / perfect clock (step 2): 3 unknowns, real phone clock: 4 | The globe is already 3D; the extra unknown is the clock. |
 | Step 4 | ±763 km, rings, 500,000× shakier, "a few metres across", "Drag one satellite to the far side. The cloud snaps back." | live 3D sizes, balls, "a million times shakier", "reaches about 5 m from the dot" (footnote 2), "…other side of the sky. The cloud shrinks back." Two new lines: a Try about turning the Earth, and a note that height is shakier. | New numbers, footnoted fact, and the 3D cloud. |
 | Recap 2 and 3 | ring / one extra satellite | giant ball / a fourth satellite | Matches the steps. |
-| Number cards, step 5 Try | (no footnotes) | footnotes 1 and 5 added | Every real-world number now has a source. |
+| Number cards | (no footnotes) | footnote 1 added | Every real-world number now has a source. |
 | Fine print | flat-picture line | lines for frozen hand-placed satellites, step 2's perfect clock, the flat pale circle, step 5 showing only across-street position, perfect-ball Earth and perfect orbits | Every simplification is said on screen. |
 | Fine print closing line and footer | wording followed the exemplar | "Every number, ball and dot on this page is worked out live in your browser…" / "The code is open on GitHub" | New words, as the spec asked. |
