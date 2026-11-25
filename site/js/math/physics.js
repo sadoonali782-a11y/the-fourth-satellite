@@ -11,19 +11,10 @@ export const GPS_HEIGHT_ABOVE_GROUND_IN_METRES = 20_200_000;
 // One trip round the Earth takes half a sidereal day: 11 hours 58 minutes.
 export const GPS_ORBIT_PERIOD_IN_SECONDS = 11 * 3600 + 58 * 60;
 
-export function metresToKilometres(metres) {
-  return metres / 1000;
-}
+// Angles are given in degrees on the page; JavaScript's Math functions want radians.
+export const DEGREES_TO_RADIANS = Math.PI / 180;
 
-export function kilometresToMetres(kilometres) {
-  return kilometres * 1000;
-}
-
-// How far light travels in the given time. This is how a delay becomes a distance.
-export function travelTimeToDistance(timeInSeconds) {
-  return timeInSeconds * SPEED_OF_LIGHT_IN_METRES_PER_SECOND;
-}
-
+// How long light takes to travel the given distance. This is how a distance becomes a delay.
 export function distanceToTravelTime(distanceInMetres) {
   return distanceInMetres / SPEED_OF_LIGHT_IN_METRES_PER_SECOND;
 }

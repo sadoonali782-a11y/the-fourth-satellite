@@ -8,9 +8,16 @@ import { LineGeometry } from '../../vendor/three/lines/LineGeometry.js';
 import { LineMaterial } from '../../vendor/three/lines/LineMaterial.js';
 import { EARTH_RADIUS_IN_KM } from './earthModel.js';
 import { localDirectionsAt } from '../math/earthGeometry.js';
+import { addVectors, scaleVector, unitVector, crossProduct3d, dotProduct, vectorLength } from '../math/vectors.js';
+import { DEGREES_TO_RADIANS } from '../math/physics.js';
 
+// The maths files work in metres; the 3D scene works in kilometres. These two convert between them.
 export function toScene(pointInMetres) {
   return new THREE.Vector3(pointInMetres[0] / 1000, pointInMetres[1] / 1000, pointInMetres[2] / 1000);
+}
+
+export function fromScene(vectorInKm) {
+  return [vectorInKm.x * 1000, vectorInKm.y * 1000, vectorInKm.z * 1000];
 }
 
 const sharedBallGeometry = new THREE.SphereGeometry(1, 128, 64);
@@ -104,8 +111,7 @@ export function makeScreenLine(colour, widthInPixels, { dashed = false, dashSize
         return;
       }
       line.visible = true;
-      const flat = [];
-      pointsInMetres.forEach((point) => flat.push(point[0] / 1000, point[1] / 1000, point[2] / 1000));
+      const flat = pointsInMetres.flatMap((point) => toScene(point).toArray());
       line.geometry.dispose();
       line.geometry = new LineGeometry();
       line.geometry.setPositions(flat);
@@ -119,34 +125,22 @@ export function makeScreenLine(colour, widthInPixels, { dashed = false, dashSize
   };
 }
 
-// Points round a circle in 3D: centre, radius and the direction the circle's face points (all in metres).
+// One point on a circle in 3D, given its centre, radius, the direction its face points (axis) and an angle.
+export function pointOnCircle(centre, radius, axis, angle) {
+  const helper = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const firstSide = unitVector(crossProduct3d(axis, helper));
+  const secondSide = crossProduct3d(axis, firstSide);
+  const offset = addVectors(scaleVector(firstSide, Math.cos(angle)), scaleVector(secondSide, Math.sin(angle)));
+  return addVectors(centre, scaleVector(offset, radius));
+}
+
+// Points all the way round that circle (all in metres).
 export function circlePoints(centre, radius, axis, numberOfPoints = 180) {
-  let helper = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
-  const firstSide = normalise(cross(axis, helper));
-  const secondSide = cross(axis, firstSide);
   const points = [];
   for (let index = 0; index <= numberOfPoints; index += 1) {
-    const angle = (index / numberOfPoints) * Math.PI * 2;
-    points.push([
-      centre[0] + radius * (Math.cos(angle) * firstSide[0] + Math.sin(angle) * secondSide[0]),
-      centre[1] + radius * (Math.cos(angle) * firstSide[1] + Math.sin(angle) * secondSide[1]),
-      centre[2] + radius * (Math.cos(angle) * firstSide[2] + Math.sin(angle) * secondSide[2]),
-    ]);
+    points.push(pointOnCircle(centre, radius, axis, (index / numberOfPoints) * Math.PI * 2));
   }
   return points;
-}
-
-function cross(first, second) {
-  return [
-    first[1] * second[2] - first[2] * second[1],
-    first[2] * second[0] - first[0] * second[2],
-    first[0] * second[1] - first[1] * second[0],
-  ];
-}
-
-function normalise(vector) {
-  const length = Math.hypot(vector[0], vector[1], vector[2]);
-  return [vector[0] / length, vector[1] / length, vector[2] / length];
 }
 
 // A cloud of small round specks, each a few pixels wide whatever the zoom.
@@ -181,11 +175,7 @@ export function makeSpeckCloud(colour, maximumSpecks, sizeInPixels) {
   return {
     object: points,
     setPoints(pointsInMetres, pixelDensity) {
-      pointsInMetres.forEach((point, index) => {
-        positions[index * 3] = point[0] / 1000;
-        positions[index * 3 + 1] = point[1] / 1000;
-        positions[index * 3 + 2] = point[2] / 1000;
-      });
+      pointsInMetres.forEach((point, index) => toScene(point).toArray(positions, index * 3));
       geometry.setDrawRange(0, pointsInMetres.length);
       geometry.attributes.position.needsUpdate = true;
       material.uniforms.speckSize.value = sizeInPixels * pixelDensity;
@@ -232,19 +222,14 @@ export function makePaleCircle(colour) {
 
 // A faint orbit path through a satellite: a circle round the Earth's centre, tilted 55° like GPS orbits.
 export function orbitPathPoints(satellitePositionInMetres) {
-  const radius = Math.hypot(...satellitePositionInMetres);
-  const outward = normalise(satellitePositionInMetres);
-  // Pick the orbit's axis so the circle passes through the satellite and leans like a 55° orbit.
+  const radius = vectorLength(satellitePositionInMetres);
+  const outward = unitVector(satellitePositionInMetres);
+  // Lean the orbit's axis 55° away from the North Pole, sideways to the satellite.
   const towardsNorth = [0, 1, 0];
-  const sideways = normalise(cross(towardsNorth, outward).map((part, index) => part + (index === 1 ? 1e-9 : 0)));
-  const tilt = (55 * Math.PI) / 180;
-  const axis = normalise([
-    Math.cos(tilt) * towardsNorth[0] + Math.sin(tilt) * sideways[0],
-    Math.cos(tilt) * towardsNorth[1] + Math.sin(tilt) * sideways[1],
-    Math.cos(tilt) * towardsNorth[2] + Math.sin(tilt) * sideways[2],
-  ]);
+  const sideways = unitVector(addVectors(crossProduct3d(towardsNorth, outward), [0, 1e-9, 0]));
+  const tilt = 55 * DEGREES_TO_RADIANS;
+  const axis = addVectors(scaleVector(towardsNorth, Math.cos(tilt)), scaleVector(sideways, Math.sin(tilt)));
   // Remove any part of the axis along the satellite's direction, so the circle goes through it.
-  const along = axis[0] * outward[0] + axis[1] * outward[1] + axis[2] * outward[2];
-  const correctedAxis = normalise([axis[0] - along * outward[0], axis[1] - along * outward[1], axis[2] - along * outward[2]]);
+  const correctedAxis = unitVector(addVectors(axis, scaleVector(outward, -dotProduct(axis, outward))));
   return circlePoints([0, 0, 0], radius, correctedAxis, 240);
 }

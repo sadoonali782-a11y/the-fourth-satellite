@@ -15,11 +15,11 @@ import {
 import {
   distanceToSatelliteAtElevation,
   messageDelayAtElevation,
+  onScreenTripSeconds,
   MESSAGE_SLOW_DOWN,
   RESULT_STAYS_FOR_SECONDS,
 } from '../math/timingModel.js';
-
-const DEGREES_TO_RADIANS = Math.PI / 180;
+import { DEGREES_TO_RADIANS } from '../math/physics.js';
 
 function describeAngle(elevationInDegrees) {
   if (elevationInDegrees > 75) {
@@ -58,7 +58,7 @@ export function startTimingStep() {
   sendAgainButton.addEventListener('click', sendNewMessage);
 
   function drawFrame(secondsSinceLastFrame) {
-    const tripSeconds = messageDelayAtElevation(state.elevationInDegrees) * MESSAGE_SLOW_DOWN;
+    const tripSeconds = onScreenTripSeconds(state.elevationInDegrees);
     if (!state.isWaitingForSendAgain) {
       state.secondsSinceSent += secondsSinceLastFrame;
     }

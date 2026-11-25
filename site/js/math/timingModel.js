@@ -1,9 +1,7 @@
 // Step 1's maths: how far away a satellite is when you see it at a given angle above the horizon,
 // and how long its message takes to reach you. Uses a real orbit 20,200 km up on a round Earth.
 
-import { EARTH_RADIUS_IN_METRES, GPS_ORBIT_RADIUS_IN_METRES, distanceToTravelTime } from './physics.js';
-
-const DEGREES_TO_RADIANS = Math.PI / 180;
+import { EARTH_RADIUS_IN_METRES, GPS_ORBIT_RADIUS_IN_METRES, DEGREES_TO_RADIANS, distanceToTravelTime } from './physics.js';
 
 export const MESSAGE_SLOW_DOWN = 30;
 export const RESULT_STAYS_FOR_SECONDS = 1.6;

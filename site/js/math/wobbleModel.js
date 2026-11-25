@@ -56,14 +56,3 @@ export function paleCircleRadius(satellitePositions, answerPosition) {
     groundDirections: [east, north],
   });
 }
-
-// The same idea for height only (up–down), used to say "height is even shakier".
-export function heightWobble(satellitePositions, answerPosition) {
-  const { up } = localDirectionsAt(answerPosition);
-  return sizeUncertaintyCircle({
-    satellitePositions,
-    answerPosition,
-    measurementErrorInMetres: EXAGGERATED_MEASUREMENT_ERROR_IN_METRES,
-    groundDirections: [up],
-  });
-}

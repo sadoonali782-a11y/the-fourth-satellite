@@ -3,12 +3,10 @@
 // every 0.9 s, and the pale circle on the ground sized from the satellites' layout.
 
 import { makeGlobeView } from '../globe/globeView.js';
-import { makeScreenLine, makeSpeckCloud, makePaleCircle, orbitPathPoints } from '../globe/globeObjects.js';
-import { pixelDensity } from '../globe/globeRenderer.js';
-import { SATELLITE_ICON_HTML, homeViewFor, dragSatelliteTo, nudgeSatellite, describeSatellite } from '../globe/globeHelpers.js';
-import { themeColours, whenThemeChanges } from '../theme.js';
-import { makeCaptionWriter, animateWhileOnScreen, setTextIfChanged, formatWholeNumber, prefersLessMotion } from '../pageHelpers.js';
-import { blendVectors, scaleVector, unitVector } from '../math/vectors.js';
+import { makeSpeckCloud, makePaleCircle } from '../globe/globeObjects.js';
+import { homeViewFor, colourFromTheme, addOrbitLines, addSatelliteMarkers, addSatelliteGrabTarget } from '../globe/globeHelpers.js';
+import { makeCaptionWriter, animateWhileOnScreen, setTextIfChanged, formatWholeNumber, prefersLessMotion, pixelDensity } from '../pageHelpers.js';
+import { blendVectors, scaleVector, unitVector, distanceBetween } from '../math/vectors.js';
 import { GPS_ORBIT_RADIUS_IN_METRES, EARTH_RADIUS_IN_METRES } from '../math/physics.js';
 import { makeRandomNumberGenerator, bellCurveNumber } from '../math/randomNumbers.js';
 import {
@@ -23,6 +21,7 @@ import { startingPoint, placeSatellites, WOBBLE_STEP_SPREAD_SKY, WOBBLE_STEP_BUN
 
 const SECONDS_BETWEEN_HOPS = 0.9;
 const GLIDE_SHARE_PER_FRAME = 0.08;
+const GLIDE_ARRIVES_WITHIN_METRES = 5000;
 const LOWEST_SATELLITE_IN_DEGREES = 10;
 const CAPTION_SWITCHES_AT_METRES = 3_600_000;
 const METER_FULL_AT_METRES = 12_000_000;
@@ -49,42 +48,25 @@ export function startWobbleStep() {
   };
 
   const view = makeGlobeView(box, { home: homeViewFor(you, 40_000, 0.8, 6371), label: 'step 4 globe', fieldOfViewInDegrees: 64 });
-  let colours = themeColours();
 
-  const specks = makeSpeckCloud(colours.blue, NUMBER_OF_SPECKS_IN_CLOUD, 6);
+  const specks = colourFromTheme('blue', makeSpeckCloud('#000', NUMBER_OF_SPECKS_IN_CLOUD, 6));
   view.scene.add(specks.object);
-  const paleCircle = makePaleCircle(colours.blue);
+  const paleCircle = colourFromTheme('blue', makePaleCircle('#000'));
   view.scene.add(paleCircle.object);
-  const orbitLines = state.satellites.map(() => {
-    const line = makeScreenLine(colours.violet, 1, { dashed: true, dashSizeInKm: 900, opacity: 0.35 });
-    view.scene.add(line.object);
-    return line;
-  });
-
-  const satelliteMarkers = state.satellites.map(() => view.addMarker('satellite-marker', SATELLITE_ICON_HTML));
-  const satelliteLabels = state.satellites.map((position, index) => {
-    const label = view.addMarker('globe-label');
-    label.element.textContent = names[index];
-    return label;
-  });
+  const orbitLines = addOrbitLines(view, state.satellites);
+  const satelliteMarkers = addSatelliteMarkers(view, names);
   const blueDot = view.addMarker('blue-dot');
 
-  state.satellites.forEach((position, index) => {
-    view.addGrabTarget({
-      name: `Satellite ${names[index]}`,
-      getPointInMetres: () => state.satellites[index],
-      onDragTo(screenX, screenY) {
-        const moved = dragSatelliteTo(view, screenX, screenY, you, LOWEST_SATELLITE_IN_DEGREES);
-        if (moved) {
-          state.satellites[index] = moved;
-          state.glideTo = null;
-        }
-      },
-      onArrowKey(stepsRight, stepsUp, isBigStep) {
-        state.satellites[index] = nudgeSatellite(state.satellites[index], you, stepsRight, stepsUp, isBigStep, LOWEST_SATELLITE_IN_DEGREES);
+  names.forEach((name, index) => {
+    addSatelliteGrabTarget(view, {
+      name: `Satellite ${name}`,
+      getPoint: () => state.satellites[index],
+      setPoint(newPosition) {
+        state.satellites[index] = newPosition;
         state.glideTo = null;
       },
-      describe: () => describeSatellite(state.satellites[index], you),
+      observerPoint: you,
+      minimumElevationInDegrees: LOWEST_SATELLITE_IN_DEGREES,
     });
   });
 
@@ -103,13 +85,7 @@ export function startWobbleStep() {
     }
   }
 
-  whenThemeChanges((newColours) => {
-    colours = newColours;
-    specks.setColour(colours.blue);
-    paleCircle.setColour(colours.blue);
-    orbitLines.forEach((line) => line.setColour(colours.violet));
-  });
-
+  // Each frame, every gliding satellite moves a share of the way to its goal, staying on the orbit shell.
   function moveGlidingSatellites() {
     if (state.glideTo === null) {
       return;
@@ -117,9 +93,8 @@ export function startWobbleStep() {
     let stillMoving = false;
     state.satellites = state.satellites.map((position, index) => {
       const goal = state.glideTo[index];
-      const blended = blendVectors(position, goal, GLIDE_SHARE_PER_FRAME);
-      const onShell = scaleVector(unitVector(blended), GPS_ORBIT_RADIUS_IN_METRES);
-      if (Math.hypot(onShell[0] - goal[0], onShell[1] - goal[1], onShell[2] - goal[2]) > 5000) {
+      const onShell = scaleVector(unitVector(blendVectors(position, goal, GLIDE_SHARE_PER_FRAME)), GPS_ORBIT_RADIUS_IN_METRES);
+      if (distanceBetween(onShell, goal) > GLIDE_ARRIVES_WITHIN_METRES) {
         stillMoving = true;
         return onShell;
       }
@@ -150,35 +125,32 @@ export function startWobbleStep() {
 
     const liveAnswer = answerForErrors(state.satellites, you, state.liveErrors);
     const radius = liveAnswer ? paleCircleRadius(state.satellites, liveAnswer.position) : null;
+    const canTell = radius !== null;
 
-    if (liveAnswer && radius !== null) {
-      blueDot.setVisible(true);
+    blueDot.setVisible(canTell);
+    paleCircle.setVisible(canTell);
+    if (canTell) {
       blueDot.setPoint(liveAnswer.position);
-      paleCircle.setVisible(true);
       paleCircle.place(scaleVector(unitVector(liveAnswer.position), EARTH_RADIUS_IN_METRES), radius);
-      setTextIfChanged(sizeReadOut, `±${formatWholeNumber(radius / 1000)} km`);
-      meterFill.style.width = `${Math.min(100, (radius / METER_FULL_AT_METRES) * 100)}%`;
-      if (radius < CAPTION_SWITCHES_AT_METRES) {
-        writeCaption('The satellites are <strong>spread around you</strong>, so their balls cross at wide angles. Small errors only nudge the dot.');
-      } else {
-        writeCaption('The satellites are <strong>bunched together</strong>, so their balls cross at shallow angles. The same small errors now slide the dot a long way.');
-      }
-    } else {
-      blueDot.setVisible(false);
-      paleCircle.setVisible(false);
-      setTextIfChanged(sizeReadOut, 'can’t tell');
-      meterFill.style.width = '100%';
-      writeCaption('The satellites are <strong>bunched together</strong>, so their balls cross at shallow angles. The same small errors now slide the dot a long way.');
     }
+    setTextIfChanged(sizeReadOut, canTell ? `±${formatWholeNumber(radius / 1000)} km` : 'can’t tell');
+    meterFill.style.width = `${canTell ? Math.min(100, (radius / METER_FULL_AT_METRES) * 100) : 100}%`;
+
+    const isBunched = !canTell || radius >= CAPTION_SWITCHES_AT_METRES;
+    writeCaption(
+      isBunched
+        ? 'The satellites are <strong>bunched together</strong>, so their balls cross at shallow angles. The same small errors now slide the dot a long way.'
+        : 'The satellites are <strong>spread around you</strong>, so their balls cross at wide angles. Small errors only nudge the dot.',
+    );
 
     state.satellites.forEach((position, index) => {
+      // Working out an orbit path takes a moment, so only redo it when the satellite has moved.
       const orbitKey = position.join(',');
       if (orbitLines[index].lastKey !== orbitKey) {
-        orbitLines[index].setPoints(orbitPathPoints(position));
+        orbitLines[index].setSatellite(position);
         orbitLines[index].lastKey = orbitKey;
       }
-      satelliteMarkers[index].setPoint(position);
-      satelliteLabels[index].setPoint(position, -5, -36);
+      satelliteMarkers[index].place(position);
     });
 
     view.render(secondsSinceLastFrame);

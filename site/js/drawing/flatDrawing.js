@@ -1,12 +1,12 @@
 // Shared pieces for the flat (2D) drawings in steps 1 and 5: keeping a canvas sharp at its box's size,
 // and drawing the person, the satellite icon, the blue dot and outlined labels.
 
-const LARGEST_PIXEL_DENSITY = 2;
+import { pixelDensity } from '../pageHelpers.js';
 
 // Makes the canvas match its box on screen, at up to 2× pixel density. Returns the drawing context
 // set up so that 1 unit = 1 CSS pixel, plus the box's width and height.
 export function prepareCanvas(canvas) {
-  const density = Math.min(window.devicePixelRatio || 1, LARGEST_PIXEL_DENSITY);
+  const density = pixelDensity();
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
   const pixelWidth = Math.max(1, Math.round(width * density));
@@ -96,14 +96,6 @@ export function drawLabel(context, text, x, y, colours, { colour = colours.text,
   context.fillStyle = colour;
   context.fillText(text, x, y);
   context.restore();
-}
-
-// A faint glow above a curved or flat horizon, the same atmosphere colour the globe uses.
-export function atmosphereGradient(context, topY, bottomY, atmosphereColour) {
-  const gradient = context.createLinearGradient(0, topY, 0, bottomY);
-  gradient.addColorStop(0, 'rgba(0,0,0,0)');
-  gradient.addColorStop(1, hexWithAlpha(atmosphereColour, 0.28));
-  return gradient;
 }
 
 export function hexWithAlpha(hexColour, alpha) {

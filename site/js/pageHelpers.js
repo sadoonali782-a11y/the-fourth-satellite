@@ -75,6 +75,11 @@ export function whenMotionPreferenceChanges(listener) {
   lessMotionQuery.addEventListener('change', () => listener(lessMotionQuery.matches));
 }
 
+// How many real screen pixels make one CSS pixel, capped at 2 so big screens don't get slow.
+export function pixelDensity() {
+  return Math.min(window.devicePixelRatio || 1, 2);
+}
+
 // One shared animation loop. Each drawing registers a frame function and the element it lives in;
 // the frame function runs only while that element is on or within 120 px of the screen.
 const animatedThings = [];

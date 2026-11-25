@@ -6,8 +6,7 @@
 // the page while scrolling.
 
 import * as THREE from 'three';
-
-const LARGEST_PIXEL_DENSITY = 2;
+import { pixelDensity } from '../pageHelpers.js';
 
 let sharedRenderer = null;
 
@@ -24,10 +23,6 @@ export function getSharedRenderer() {
     sharedRenderer.autoClear = true;
   }
   return sharedRenderer;
-}
-
-export function pixelDensity() {
-  return Math.min(window.devicePixelRatio || 1, LARGEST_PIXEL_DENSITY);
 }
 
 // Draws a scene through a camera into the given visible canvas, sized to that canvas's box.

@@ -4,7 +4,7 @@
 // Longitude 0 points along +x and longitude 90° east points along −z
 // (this matches how three.js wraps a world map around a sphere).
 
-import { EARTH_RADIUS_IN_METRES, GPS_ORBIT_RADIUS_IN_METRES } from './physics.js';
+import { EARTH_RADIUS_IN_METRES, GPS_ORBIT_RADIUS_IN_METRES, DEGREES_TO_RADIANS } from './physics.js';
 import {
   addVectors,
   subtractVectors,
@@ -14,8 +14,6 @@ import {
   unitVector,
   crossProduct3d,
 } from './vectors.js';
-
-const DEGREES_TO_RADIANS = Math.PI / 180;
 
 export function latitudeLongitudeToPoint(latitudeInDegrees, longitudeInDegrees, radiusInMetres = EARTH_RADIUS_IN_METRES) {
   const latitude = latitudeInDegrees * DEGREES_TO_RADIANS;

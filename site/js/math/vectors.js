@@ -49,8 +49,3 @@ export function crossProduct3d(first, second) {
 export function blendVectors(start, end, fraction) {
   return start.map((value, index) => value + (end[index] - value) * fraction);
 }
-
-export function averageOfPoints(points) {
-  const total = points.reduce((sum, point) => addVectors(sum, point), points[0].map(() => 0));
-  return scaleVector(total, 1 / points.length);
-}

@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { EARTH_RADIUS_IN_METRES } from '../math/physics.js';
 import { latitudeLongitudeToPoint } from '../math/earthGeometry.js';
 import { earthColours } from '../earthColours.js';
+import { makeRandomNumberGenerator } from '../math/randomNumbers.js';
 
 export const EARTH_RADIUS_IN_KM = EARTH_RADIUS_IN_METRES / 1000;
 const LAND_PICTURE_WIDTH = 4096;
@@ -49,11 +50,6 @@ function decodeRing(numbers, unitInDegrees) {
     points.push([longitude * unitInDegrees, latitude * unitInDegrees]);
   }
   return points;
-}
-
-function pointInKm(latitude, longitude, radiusInKm) {
-  const [x, y, z] = latitudeLongitudeToPoint(latitude, longitude, radiusInKm);
-  return [x, y, z];
 }
 
 // Paints ocean and land into the flat world picture. Land shades from icy near the poles,
@@ -126,8 +122,8 @@ function buildSharedGeometry() {
   const coastlinePoints = [];
   shared.coastlineRings.forEach((ring) => {
     for (let index = 0; index < ring.length - 1; index += 1) {
-      coastlinePoints.push(...pointInKm(ring[index][1], ring[index][0], EARTH_RADIUS_IN_KM + 1));
-      coastlinePoints.push(...pointInKm(ring[index + 1][1], ring[index + 1][0], EARTH_RADIUS_IN_KM + 1));
+      coastlinePoints.push(...latitudeLongitudeToPoint(ring[index][1], ring[index][0], EARTH_RADIUS_IN_KM + 1));
+      coastlinePoints.push(...latitudeLongitudeToPoint(ring[index + 1][1], ring[index + 1][0], EARTH_RADIUS_IN_KM + 1));
     }
   });
   shared.coastlineGeometry = new THREE.BufferGeometry();
@@ -138,15 +134,11 @@ function buildSharedGeometry() {
 
   // Faint stars on a far-away sphere, for the dark theme.
   const starPoints = [];
-  let seed = 7;
-  const nextNumber = () => {
-    seed = (seed * 16807) % 2147483647;
-    return seed / 2147483647;
-  };
+  const nextNumber = makeRandomNumberGenerator(7);
   for (let index = 0; index < 500; index += 1) {
     const latitude = Math.asin(2 * nextNumber() - 1) * (180 / Math.PI);
     const longitude = nextNumber() * 360 - 180;
-    starPoints.push(...pointInKm(latitude, longitude, 900_000));
+    starPoints.push(...latitudeLongitudeToPoint(latitude, longitude, 900_000));
   }
   shared.starGeometry = new THREE.BufferGeometry();
   shared.starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPoints, 3));
@@ -158,12 +150,12 @@ function makeGridGeometry(spacing, step) {
   const radius = EARTH_RADIUS_IN_KM + 0.5;
   for (let longitude = -180; longitude < 180; longitude += spacing) {
     for (let latitude = -90; latitude < 90; latitude += step) {
-      points.push(...pointInKm(latitude, longitude, radius), ...pointInKm(latitude + step, longitude, radius));
+      points.push(...latitudeLongitudeToPoint(latitude, longitude, radius), ...latitudeLongitudeToPoint(latitude + step, longitude, radius));
     }
   }
   for (let latitude = -90 + spacing; latitude < 90; latitude += spacing) {
     for (let longitude = -180; longitude < 180; longitude += step) {
-      points.push(...pointInKm(latitude, longitude, radius), ...pointInKm(latitude, longitude + step, radius));
+      points.push(...latitudeLongitudeToPoint(latitude, longitude, radius), ...latitudeLongitudeToPoint(latitude, longitude + step, radius));
     }
   }
   const geometry = new THREE.BufferGeometry();

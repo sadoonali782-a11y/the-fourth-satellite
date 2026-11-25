@@ -28,10 +28,9 @@ export function findPosition({
 }) {
   const numberOfDirections = firstGuess.length;
   const numberOfUnknowns = numberOfDirections + (solveForClock ? 1 : 0);
-  const numberOfSatellites = satellitePositions.length;
 
   // Each satellite gives one clue. With fewer clues than unknowns there is no single answer.
-  if (numberOfSatellites < numberOfUnknowns) {
+  if (satellitePositions.length < numberOfUnknowns) {
     return null;
   }
 
@@ -47,34 +46,21 @@ export function findPosition({
 
   for (let round = 1; round <= maximumRounds; round += 1) {
     roundsUsed = round;
-    const misses = [];
-    const slopeRows = [];
 
-    for (let index = 0; index < numberOfSatellites; index += 1) {
-      // Step 2, PREDICT: how far would this signal have seemed to travel if the guess were right?
-      const distanceFromGuess = distanceBetween(guessedPosition, satellitePositions[index]);
-      const predictedDistance = distanceFromGuess + guessedClockErrorInMetres;
-
-      // Step 3, COMPARE: the "miss" is measured minus predicted.
-      misses.push(measuredDistances[index] - predictedDistance);
-
-      // How the prediction changes if the guess moves a little in each direction (and if the clock changes).
-      const directionAwayFromSatellite = scaleVector(
-        subtractVectors(guessedPosition, satellitePositions[index]),
-        1 / Math.max(distanceFromGuess, 1e-9),
-      );
-      slopeRows.push(solveForClock ? [...directionAwayFromSatellite, 1] : directionAwayFromSatellite);
-    }
+    // Step 2, PREDICT: how far would each signal have seemed to travel if the guess were right?
+    // Step 3, COMPARE: the "miss" is measured minus predicted.
+    const misses = satellitePositions.map((satellitePosition, index) => {
+      const predictedDistance = distanceBetween(guessedPosition, satellitePosition) + guessedClockErrorInMetres;
+      return measuredDistances[index] - predictedDistance;
+    });
 
     // Step 4, IMPROVE: find the one small move that shrinks all the misses together as much as possible
     // (least squares: it makes the sum of the squared misses as small as it can be).
-    const move = bestMoveForMisses(slopeRows, misses);
+    const move = bestMoveForMisses(slopeRowsAt(guessedPosition, satellitePositions, solveForClock), misses);
     if (move === null) {
       return null; // the satellites are arranged so that no single answer exists
     }
-    for (let direction = 0; direction < numberOfDirections; direction += 1) {
-      guessedPosition[direction] += move[direction];
-    }
+    guessedPosition = guessedPosition.map((part, direction) => part + move[direction]);
     if (solveForClock) {
       guessedClockErrorInMetres += move[numberOfDirections];
     }
@@ -93,57 +79,57 @@ export function findPosition({
   };
 }
 
+// The "slopes": how each satellite's predicted distance changes if the position moves a little.
+// Moving one metre straight away from a satellite adds one metre, so each row is simply the direction
+// away from that satellite. When the clock is being solved too, each row ends with a 1, because one
+// extra metre of clock error adds one metre to every prediction.
+function slopeRowsAt(position, satellitePositions, includeClock) {
+  return satellitePositions.map((satellitePosition) => {
+    const distance = Math.max(distanceBetween(position, satellitePosition), 1e-9);
+    const awayFromSatellite = scaleVector(subtractVectors(position, satellitePosition), 1 / distance);
+    return includeClock ? [...awayFromSatellite, 1] : awayFromSatellite;
+  });
+}
+
+// slopesᵀ × slopes. Both the solver and the pale circle are built on this one matrix.
+function normalMatrix(slopeRows) {
+  const size = slopeRows[0].length;
+  const matrix = [];
+  for (let row = 0; row < size; row += 1) {
+    matrix.push(new Array(size).fill(0));
+    for (let column = 0; column < size; column += 1) {
+      slopeRows.forEach((slopes) => {
+        matrix[row][column] += slopes[row] * slopes[column];
+      });
+    }
+  }
+  return matrix;
+}
+
 // Least squares: solve (slopesᵀ × slopes) × move = slopesᵀ × misses.
 function bestMoveForMisses(slopeRows, misses) {
-  const numberOfUnknowns = slopeRows[0].length;
-  const leftSide = [];
+  const size = slopeRows[0].length;
   const rightSide = [];
-  for (let row = 0; row < numberOfUnknowns; row += 1) {
-    leftSide.push(new Array(numberOfUnknowns).fill(0));
-    rightSide.push(0);
+  for (let row = 0; row < size; row += 1) {
+    rightSide.push(slopeRows.reduce((total, slopes, satelliteIndex) => total + slopes[row] * misses[satelliteIndex], 0));
   }
-  slopeRows.forEach((slopes, satelliteIndex) => {
-    for (let row = 0; row < numberOfUnknowns; row += 1) {
-      rightSide[row] += slopes[row] * misses[satelliteIndex];
-      for (let column = 0; column < numberOfUnknowns; column += 1) {
-        leftSide[row][column] += slopes[row] * slopes[column];
-      }
-    }
-  });
-  return solveLinearEquations(leftSide, rightSide);
+  return solveLinearEquations(normalMatrix(slopeRows), rightSide);
 }
 
 // How big the pale circle should be.
 // Each measured distance has a random error of typical size measurementErrorInMetres. How much that moves
-// the answer depends only on the directions to the satellites (engineers call this "dilution of precision").
+// the answer depends only on the directions to the satellites (engineers call this "dilution of precision"):
+// it uses the very same slopes the solver used, at the answer, with the clock included.
 // groundDirections are the flat directions the map shows (for example east and north at the answer).
 // We add up how much the answer is expected to wobble along each of them, and take the square root.
 // Returns the radius in metres, or null when the layout gives no single answer.
 export function sizeUncertaintyCircle({ satellitePositions, answerPosition, measurementErrorInMetres, groundDirections }) {
   const numberOfDirections = answerPosition.length;
-  const slopeRows = satellitePositions.map((satellitePosition) => {
-    const distance = Math.max(distanceBetween(answerPosition, satellitePosition), 1e-9);
-    const direction = scaleVector(subtractVectors(answerPosition, satellitePosition), 1 / distance);
-    return [...direction, 1];
-  });
-  if (slopeRows.length < numberOfDirections + 1) {
+  if (satellitePositions.length < numberOfDirections + 1) {
     return null;
   }
 
-  const numberOfUnknowns = numberOfDirections + 1;
-  const normalMatrix = [];
-  for (let row = 0; row < numberOfUnknowns; row += 1) {
-    normalMatrix.push(new Array(numberOfUnknowns).fill(0));
-  }
-  slopeRows.forEach((slopes) => {
-    for (let row = 0; row < numberOfUnknowns; row += 1) {
-      for (let column = 0; column < numberOfUnknowns; column += 1) {
-        normalMatrix[row][column] += slopes[row] * slopes[column];
-      }
-    }
-  });
-
-  const spreadMatrix = invertMatrix(normalMatrix);
+  const spreadMatrix = invertMatrix(normalMatrix(slopeRowsAt(answerPosition, satellitePositions, true)));
   if (spreadMatrix === null) {
     return null;
   }

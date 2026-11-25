@@ -2,12 +2,11 @@
 // turning Earth, with your blue dot breathing on the ground. Decoration only: hidden from screen readers,
 // and still when less motion is preferred.
 
-import * as THREE from 'three';
 import { makeGlobeView } from '../globe/globeView.js';
-import { makeScreenLine, circlePoints } from '../globe/globeObjects.js';
-import { themeColours, whenThemeChanges } from '../theme.js';
+import { makeScreenLine, circlePoints, pointOnCircle } from '../globe/globeObjects.js';
+import { colourFromTheme } from '../globe/globeHelpers.js';
 import { animateWhileOnScreen, prefersLessMotion } from '../pageHelpers.js';
-import { GPS_ORBIT_RADIUS_IN_METRES } from '../math/physics.js';
+import { GPS_ORBIT_RADIUS_IN_METRES, DEGREES_TO_RADIANS } from '../math/physics.js';
 import { startingPoint } from '../math/sceneLayouts.js';
 import { localDirectionsAt } from '../math/earthGeometry.js';
 
@@ -16,21 +15,12 @@ const SATELLITES_PER_ORBIT = [6, 5, 5, 5, 5, 5]; // 31 in all
 const ORBIT_TILT_IN_DEGREES = 55;
 const SECONDS_PER_ON_SCREEN_ORBIT = 60;
 const EARTH_TURN_PER_SECOND = 0.03;
-const DEGREES_TO_RADIANS = Math.PI / 180;
 
 // The axis of each orbit: tilted 55° from the North Pole, with the six orbits spread evenly round the Earth.
 function orbitAxis(orbitIndex) {
   const tilt = ORBIT_TILT_IN_DEGREES * DEGREES_TO_RADIANS;
   const turn = (orbitIndex * 360) / NUMBER_OF_ORBITS * DEGREES_TO_RADIANS;
   return [Math.sin(tilt) * Math.cos(turn), Math.cos(tilt), Math.sin(tilt) * Math.sin(turn)];
-}
-
-function pointOnOrbit(axis, angle) {
-  const helper = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
-  const first = new THREE.Vector3(...axis).cross(new THREE.Vector3(...helper)).normalize();
-  const second = new THREE.Vector3(...axis).cross(first).normalize();
-  const radius = GPS_ORBIT_RADIUS_IN_METRES;
-  return [0, 1, 2].map((index) => radius * (Math.cos(angle) * first.getComponent(index) + Math.sin(angle) * second.getComponent(index)));
 }
 
 export function startOpeningSky() {
@@ -45,12 +35,10 @@ export function startOpeningSky() {
     transparentBackground: true,
     label: 'opening globe',
   });
-  let colours = themeColours();
-
   const orbits = [];
   for (let orbitIndex = 0; orbitIndex < NUMBER_OF_ORBITS; orbitIndex += 1) {
     const axis = orbitAxis(orbitIndex);
-    const line = makeScreenLine(colours.violet, 1, { dashed: true, dashSizeInKm: 1500, opacity: 0.4 });
+    const line = colourFromTheme('violet', makeScreenLine('#000', 1, { dashed: true, dashSizeInKm: 1500, opacity: 0.4 }));
     line.setPoints(circlePoints([0, 0, 0], GPS_ORBIT_RADIUS_IN_METRES, axis, 240));
     view.scene.add(line.object);
     const satellites = [];
@@ -58,14 +46,9 @@ export function startOpeningSky() {
       const startAngle = (slot / SATELLITES_PER_ORBIT[orbitIndex]) * Math.PI * 2 + orbitIndex * 0.4;
       satellites.push({ startAngle, marker: view.addMarker('satellite-marker opening-satellite', '<span class="opening-satellite-dot"></span>') });
     }
-    orbits.push({ axis, line, satellites });
+    orbits.push({ axis, satellites });
   }
   const blueDot = view.addMarker('blue-dot breathing-dot');
-
-  whenThemeChanges((newColours) => {
-    colours = newColours;
-    orbits.forEach((orbit) => orbit.line.setColour(colours.violet));
-  });
 
   let secondsOfMotion = 0;
   function drawFrame(secondsSinceLastFrame) {
@@ -76,7 +59,7 @@ export function startOpeningSky() {
     const orbitAngle = (secondsOfMotion / SECONDS_PER_ON_SCREEN_ORBIT) * Math.PI * 2;
     orbits.forEach((orbit) => {
       orbit.satellites.forEach((satellite) => {
-        satellite.marker.setPoint(pointOnOrbit(orbit.axis, satellite.startAngle + orbitAngle));
+        satellite.marker.setPoint(pointOnCircle([0, 0, 0], GPS_ORBIT_RADIUS_IN_METRES, orbit.axis, satellite.startAngle + orbitAngle));
       });
     });
     blueDot.setPoint(you);

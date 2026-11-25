@@ -8,10 +8,11 @@
 //   grab rings take a one-finger drag or a mouse drag, and the arrow keys when focused.
 
 import * as THREE from 'three';
-import { renderIntoCanvas, pixelDensity } from './globeRenderer.js';
+import { renderIntoCanvas } from './globeRenderer.js';
 import { makeEarth, EARTH_RADIUS_IN_KM } from './earthModel.js';
+import { toScene, fromScene } from './globeObjects.js';
 import { themeColours, whenThemeChanges } from '../theme.js';
-import { easeInAndOut, prefersLessMotion, clamp } from '../pageHelpers.js';
+import { easeInAndOut, prefersLessMotion, clamp, pixelDensity } from '../pageHelpers.js';
 
 const FIELD_OF_VIEW_IN_DEGREES = 38;
 const FARTHEST_CAMERA_IN_KM = 260_000;
@@ -158,7 +159,7 @@ export function makeGlobeView(box, { home, interactive = true, transparentBackgr
     return {
       element,
       setPoint(pointInMetres, offsetX = 0, offsetY = 0) {
-        marker.pointInKm = pointInMetres ? new THREE.Vector3(pointInMetres[0] / 1000, pointInMetres[1] / 1000, pointInMetres[2] / 1000) : null;
+        marker.pointInKm = pointInMetres ? toScene(pointInMetres) : null;
         marker.offsetX = offsetX;
         marker.offsetY = offsetY;
       },
@@ -204,8 +205,7 @@ export function makeGlobeView(box, { home, interactive = true, transparentBackgr
       marker.element.classList.toggle('is-behind', marker.fadesBehindEarth && isBehindEarth(marker.pointInKm));
     });
     grabTargets.forEach((grabTarget) => {
-      const point = grabTarget.getPointInMetres();
-      const pointInKm = new THREE.Vector3(point[0] / 1000, point[1] / 1000, point[2] / 1000);
+      const pointInKm = toScene(grabTarget.getPointInMetres());
       const screen = projectToScreen(pointInKm);
       const hidden = !screen.isInFront || isBehindEarth(pointInKm);
       grabTarget.button.classList.toggle('is-hidden', hidden && document.activeElement !== grabTarget.button);
@@ -225,7 +225,7 @@ export function makeGlobeView(box, { home, interactive = true, transparentBackgr
     const ray = rayThroughScreenPoint(x, y);
     const sphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), shellRadiusInMetres / 1000);
     const hit = ray.intersectSphere(sphere, new THREE.Vector3());
-    return hit ? [hit.x * 1000, hit.y * 1000, hit.z * 1000] : null;
+    return hit ? fromScene(hit) : null;
   }
 
   // A lime dashed ring you can drag. onDragTo receives screen coordinates; onArrowKey receives
@@ -447,21 +447,5 @@ export function makeGlobeView(box, { home, interactive = true, transparentBackgr
 
   placeCamera();
 
-  return {
-    scene,
-    camera,
-    box,
-    render,
-    flyTo,
-    resetView,
-    turnBy,
-    zoomBy,
-    addMarker,
-    addGrabTarget,
-    screenPointOnShell,
-    isFlying: () => flight !== null,
-    announce(text) {
-      liveRegion.textContent = text;
-    },
-  };
+  return { scene, render, flyTo, turnBy, addMarker, addGrabTarget, screenPointOnShell };
 }

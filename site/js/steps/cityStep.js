@@ -4,8 +4,9 @@
 import { themeColours } from '../theme.js';
 import { earthColours } from '../earthColours.js';
 import { prepareCanvas, drawPerson, drawBlueDot, drawLabel, hexWithAlpha } from '../drawing/flatDrawing.js';
-import { makeCaptionWriter, setTextIfChanged, formatOneDecimal, animateWhileOnScreen, prefersLessMotion, clamp } from '../pageHelpers.js';
+import { makeCaptionWriter, setTextIfChanged, formatWholeNumber, formatOneDecimal, animateWhileOnScreen, prefersLessMotion, clamp } from '../pageHelpers.js';
 import { makeRandomNumberGenerator } from '../math/randomNumbers.js';
+import { DEGREES_TO_RADIANS } from '../math/physics.js';
 import {
   STREET_WIDTH_IN_METRES,
   PHONE_HEIGHT_IN_METRES,
@@ -22,7 +23,6 @@ const SECONDS_BETWEEN_ANSWERS = 0.5;
 const LONGEST_TRAIL = 30;
 const FLOOR_HEIGHT_IN_METRES = 4;
 const WINDOW_SPACING_IN_METRES = 3;
-const DEGREES_TO_RADIANS = Math.PI / 180;
 
 export function startCityStep() {
   const streetCanvas = document.getElementById('city-street-drawing');
@@ -77,14 +77,19 @@ export function startCityStep() {
     showPauseState();
   });
 
-  function workOutNewAnswer() {
-    const signals = measureStreetSignals({
+  // Every signal as it is right now. With nextRandomNumber, each heard signal also gets a little noise.
+  function signalsNow(nextRandomNumber = null) {
+    return measureStreetSignals({
       skyAngles: skyAnglesAfter(state.skyStartingAngles, state.secondsOfTurning),
       standingAcrossInMetres: state.standingAcross,
       leftBuildingHeightInMetres: state.leftBuildingHeight,
-      nextRandomNumber: state.nextRandomNumber,
+      nextRandomNumber,
     });
-    const answer = findStreetPosition(signals);
+  }
+
+  // The phone's answer from a fresh, slightly noisy measurement.
+  function workOutNewAnswer() {
+    const answer = findStreetPosition(signalsNow(state.nextRandomNumber));
     if (answer) {
       state.latestAnswer = answer;
       state.hasHadAnAnswer = true;
@@ -93,7 +98,6 @@ export function startCityStep() {
     } else {
       state.latestAnswer = null;
     }
-    return signals;
   }
 
   function drawFrame(secondsSinceLastFrame) {
@@ -106,11 +110,7 @@ export function startCityStep() {
       state.secondsUntilNextAnswer = SECONDS_BETWEEN_ANSWERS;
     }
     // The drawing always shows the sky as it is now (no noise needed to draw paths).
-    state.signals = measureStreetSignals({
-      skyAngles: skyAnglesAfter(state.skyStartingAngles, state.secondsOfTurning),
-      standingAcrossInMetres: state.standingAcross,
-      leftBuildingHeightInMetres: state.leftBuildingHeight,
-    });
+    state.signals = signalsNow();
 
     const colours = themeColours();
     drawStreet(colours);
@@ -178,8 +178,8 @@ export function startCityStep() {
     // Buildings: solid blocks from the street walls out to the drawing's edges, with faint windows.
     drawBuilding(context, colours, 0, toScreen(0, leftHeight)[1], toScreen(0, 0)[0], groundY, leftHeight, pixelsPerMetre, 'left');
     drawBuilding(context, colours, toScreen(STREET_WIDTH_IN_METRES, 0)[0], toScreen(0, rightHeight)[1], width, groundY, rightHeight, pixelsPerMetre, 'right');
-    drawRoofLabel(context, colours, toScreen(0, leftHeight), `${formatWholeNumberSimple(leftHeight)} m tall`, 'left');
-    drawRoofLabel(context, colours, toScreen(STREET_WIDTH_IN_METRES, rightHeight), `${formatWholeNumberSimple(rightHeight)} m tall`, 'right');
+    drawRoofLabel(context, colours, toScreen(0, leftHeight), `${formatWholeNumber(leftHeight)} m tall`, 'left');
+    drawRoofLabel(context, colours, toScreen(STREET_WIDTH_IN_METRES, rightHeight), `${formatWholeNumber(rightHeight)} m tall`, 'right');
 
     // Signals.
     const [phoneX, phoneY] = toScreen(state.standingAcross, PHONE_HEIGHT_IN_METRES);
@@ -267,10 +267,6 @@ export function startCityStep() {
   }
 
   animateWhileOnScreen(streetCanvas, drawFrame);
-}
-
-function formatWholeNumberSimple(value) {
-  return String(Math.round(value));
 }
 
 function drawBuilding(context, colours, leftX, topY, rightX, bottomY, heightInMetres, pixelsPerMetre, side) {

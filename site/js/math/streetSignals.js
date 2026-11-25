@@ -6,7 +6,12 @@
 // Satellite directions are angles measured from the right-hand horizon: 0° is low on the right,
 // 90° is straight overhead, 180° is low on the left.
 
-import { SPEED_OF_LIGHT_IN_METRES_PER_SECOND, GPS_HEIGHT_ABOVE_GROUND_IN_METRES, GPS_ORBIT_PERIOD_IN_SECONDS } from './physics.js';
+import {
+  SPEED_OF_LIGHT_IN_METRES_PER_SECOND,
+  GPS_HEIGHT_ABOVE_GROUND_IN_METRES,
+  GPS_ORBIT_PERIOD_IN_SECONDS,
+  DEGREES_TO_RADIANS,
+} from './physics.js';
 import { distanceBetween } from './vectors.js';
 import { findPosition } from './positionSolver.js';
 import { makeRandomNumberGenerator, bellCurveNumber } from './randomNumbers.js';
@@ -22,8 +27,6 @@ export const PHONE_CLOCK_ERROR_IN_SECONDS = 2.5e-6;
 // The real sky turns once every 11 h 58 min. Ours turns about 137 times faster so you can watch it.
 export const SKY_SPEED_UP = 137;
 export const SKY_TURN_RATE_IN_DEGREES_PER_SECOND = (360 / GPS_ORBIT_PERIOD_IN_SECONDS) * SKY_SPEED_UP;
-
-const DEGREES_TO_RADIANS = Math.PI / 180;
 
 // 16 satellites spaced evenly round the sky, each nudged a little so the pattern isn't perfectly regular.
 export function makeSkyStartingAngles(seed = 5) {
